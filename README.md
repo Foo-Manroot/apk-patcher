@@ -50,13 +50,13 @@ Where:
 # Future work
 
 If you want to contribute, you can take a look into the following open topics:
-  - [] Add more scripts. For example:
-    - [] Remove common ads and trackers
-    - [] Disable cert pinning (besides the [common methods](https://codeshare.frida.re/@akabe1/frida-multiple-unpinning/))
-	- [] Disable root detection
-  - [] Add another script for non-split apks (although [objection](https://github.com/sensepost/objection) tends to do a good job with that)
-  - [] Test more APKs. Currently tested to be working on:
+  - [ ] Add more scripts. For example:
+    - [ ] Remove common ads and trackers
+    - [ ] Disable cert pinning (besides the [common methods](https://codeshare.frida.re/@akabe1/frida-multiple-unpinning/))
+	- [ ] Disable root detection
+  - [ ] Add another script for non-split apks (although [objection](https://github.com/sensepost/objection) tends to do a good job with that)
+  - [ ] Test more APKs. Currently tested to be working on:
     - [x] com.tinder.12020070
 	- [x] ch.admin.swisstopo (version 1.6)
-	- [] ch.coop.supercard
-	- [] ch.migros.app
+	- [ ] ch.coop.supercard
+	- [ ] ch.migros.app
