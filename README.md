@@ -83,7 +83,7 @@ If you want to contribute, you can take a look into the following open topics:
     - [ ] Disable cert pinning (besides the [common methods](https://codeshare.frida.re/@akabe1/frida-multiple-unpinning/)). A good idea is [to inject our own root CA](https://gitlab.com/MadSquirrels/mobile/apkpatcher/-/blob/8c7d96b8b6f132d628ea7564251f19f1c6172be0/src/apkpatcher/__init__.py#L70))
 	- [ ] Disable root detection
   - [ ] Introduce proper logging
-  - [ ] Add more flexibility on the allowed options
+  - [ ] Dafuq is Revolut (com.revolut.revolut) to detect Frida even before it even loads ??
 
 
 # Aknowledgments

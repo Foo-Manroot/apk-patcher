@@ -105,7 +105,23 @@ def parse_args ():
         )
 
     parser.add_argument (
-            'frida_script',
+            '-f', '--fix_manifest',
+            help = (
+                "If set, the script will attempt to modify AndroidManifest.xml to set extractNativeLibs=true. "
+                "ATTENTION: it may cause problems like 'INSTALL_PARSE_FAILED_UNEXPECTED_EXCEPTION' on installation."
+            )
+        )
+
+    parser.add_argument (
+            '-c', '--config',
+            type = argparse.FileType ("r"),
+            help = "Path to a custom Gadget config ( https://frida.re/docs/gadget/ )"
+        )
+
+    parser.add_argument (
+            '-l', '--load',
+            metavar = 'frida_script',
+            dest = "frida_script",
             type = argparse.FileType ("rb"),
             help = "The JS file to patch into the apk."
         )
@@ -428,7 +444,7 @@ def arch_to_dirname (arch):
     return None
 
 
-def add_native_lib_to_apk (apk_path, out_path, frida_script):
+def add_native_lib_to_apk (apk_path, out_path, frida_script = None, gadget_config = None):
     """
     Downloads the Frida gadget and adds it to the APK, generating a copy of it.
     The original APK is not modified.
@@ -481,8 +497,10 @@ def add_native_lib_to_apk (apk_path, out_path, frida_script):
                             dirname = arch
 
                         out_apk.writestr (f"lib/{dirname}/libgadget.so", lib)
-                        out_apk.writestr (f"lib/{dirname}/libgadget.config.so", GADGET_CONFIG)
-                        out_apk.writestr (f"lib/{dirname}/libgadget.js.so", frida_script)
+                        if gadget_config:
+                            out_apk.writestr (f"lib/{dirname}/libgadget.config.so", gadget_config)
+                        if frida_script:
+                            out_apk.writestr (f"lib/{dirname}/libgadget.js.so", frida_script)
                         print (f"[DEBUG] Added all *.so to {out_path}!lib/{dirname}/")
 
 
@@ -606,7 +624,7 @@ def fix_manifest (apk_path, out_path):
                 inet_perm = "android.permission.INTERNET"
                 if not permission_exists (xml, inet_perm):
                     print (f"[DEBUG] No {inet_perm} permission.")
-                    print ("[WARNING] It's possible that the gadget has no internet connectivity. Check `logcat` for messages like `Frida   : Failed to start: Unable to create socket: Operation not permitted`")
+                    print ("[WARNING] It's possible that the gadget has no internet connectivity. Check `logcat` for messages like `Frida: Failed to start: Unable to create socket: Operation not permitted`")
                     # FIXME
  #                   add_permission (xml, inet_perm)
                 else:
@@ -674,10 +692,15 @@ if __name__ == "__main__":
         sys_exit (-3)
 
     # 4: Download Frida and add it to the lib/ directory
+    frida_script = None
+    if args.frida_script:
+        frida_script = args.frida_script.read ()
+        print (f"[DEBUG] Using the following Frida script:\n{frida_script.decode ('utf-8')}\n")
 
-    frida_script = args.frida_script.read ()
-    print (f"[DEBUG] Using the following Frida config:\n{GADGET_CONFIG.decode ('utf-8')}\n")
-    print (f"[DEBUG] Using the following Frida script:\n{frida_script.decode ('utf-8')}\n")
+    gadget_config = None
+    if args.gadget_config:
+        gadget_config = args.gadget_config.read ()
+        print (f"[DEBUG] Using the following Gadget config:\n{gadget_config.decode ('utf-8')}\n")
 
     if "abi" in parts:
 
@@ -695,9 +718,10 @@ if __name__ == "__main__":
     # extract the config
     # Also, android.permission.INTERNET has to be added to allow the Gadget to open
     # a socket (assuming that was the config)
-    tmp_mod = mod_apk_path.with_suffix (".tmp")
-    fix_manifest (mod_apk_path, tmp_mod)
-    move (tmp_mod, mod_apk_path)
+    if args.fix_manifest:
+        tmp_mod = mod_apk_path.with_suffix (".tmp")
+        fix_manifest (mod_apk_path, tmp_mod)
+        move (tmp_mod, mod_apk_path)
 
     # 6: copy everything (even the items we haven't modified) to OUT_DIR
     files = get_full_filelist (parts)
