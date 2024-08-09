@@ -209,6 +209,7 @@ def get_entry_points (main_apk_path):
             xml = parsed.get_xml_obj ()
 
             android_name = "{http://schemas.android.com/apk/res/android}name"
+            android_target = "{http://schemas.android.com/apk/res/android}targetActivity"
             # We're looking for any activity (or activity-alias) wtih action="android.intent.action.MAIN", regardless of its category
             # There might be multiple main activities, depending on how it is launched: https://stackoverflow.com/a/75269947
             #
@@ -223,13 +224,27 @@ def get_entry_points (main_apk_path):
             #
             # Therefore, and since Python's default XML parser doesn't support .getparent(), the XPath must go directly to the parent
             # using '/..' (looks like Python libraries don't support '/parent::*' )
-            xpath = f".//*/intent-filter/action[@{android_name}='android.intent.action.MAIN']/../.."
+            xpath = f".//activity/intent-filter/action[@{android_name}='android.intent.action.MAIN']/../.."
             print (f'[DEBUG] Searching for the entry point using the following XPath: `{xpath}`')
             main_activities = xml.findall (xpath)
 
+            # If none was found, maybe the activity was defined as an 'activity-alias':
+            #   <activity-alias
+            #           android:name="com.example.LoginActivity"
+            #           android:targetActivity="com.example.LaunchActivity">
+            # The actual code will be inside com.example.LaunchActivity
+            #
+            # https://developer.android.com/guide/topics/manifest/activity-alias-element
+            search_alias = not main_activities
+            if search_alias:
+                xpath = f".//activity-alias/intent-filter/action[@{android_name}='android.intent.action.MAIN']/../.."
+
+                print ("[DEBUG] No main activity was found using the previous filter. Trying with <activity-alias>...")
+                main_activities = xml.findall (xpath)
+
             # Python libraries also don't seem to support '/@attrib' to get the attribute directly, so I guess we'll have to do it by hand...
             for activity in main_activities:
-                name = activity.get (android_name)
+                name = activity.get (android_target if search_alias else android_name)
 
                 if name not in entry_points:
                     entry_points.append (name)
