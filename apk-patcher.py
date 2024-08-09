@@ -350,7 +350,7 @@ def patch_bytecode (main_apk_path, mod_apk_path, target_classes):
                                 )
                         )
 
-                    if (not main_class) or (len (main_class) <= 0):
+                    if not main_class:
                         # Not the droids we're looking for... Just add them to the output APK
                         copy_to_zip (apk, apk_mod, filename)
                         continue
@@ -646,7 +646,7 @@ if __name__ == "__main__":
     # 2: Find the entry point(s)
     entry_points = get_entry_points (main_apk_path)
 
-    if len (entry_points) <= 0:
+    if not entry_points:
         print ("[ERROR] Couldn't locate the entry point")
         sys_exit (-2)
 
