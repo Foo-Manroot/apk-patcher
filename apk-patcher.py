@@ -109,6 +109,7 @@ def parse_args ():
 
     parser.add_argument (
             '-f', '--fix_manifest',
+            action = "store_true",
             help = (
                 "If set, the script will attempt to modify AndroidManifest.xml to set extractNativeLibs=true.\n"
                 "ATTENTION: it may cause problems like 'INSTALL_PARSE_FAILED_UNEXPECTED_EXCEPTION' on installation."

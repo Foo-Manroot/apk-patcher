@@ -51,8 +51,7 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
-  -f FIX_MANIFEST, --fix_manifest FIX_MANIFEST
-                        If set, the script will attempt to modify AndroidManifest.xml to set extractNativeLibs=true.
+  -f, --fix_manifest    If set, the script will attempt to modify AndroidManifest.xml to set extractNativeLibs=true.
                         ATTENTION: it may cause problems like 'INSTALL_PARSE_FAILED_UNEXPECTED_EXCEPTION' on installation.
   -c GADGET_CONFIG, --config GADGET_CONFIG
                         Path to a custom Gadget config ( https://frida.re/docs/gadget/ )
