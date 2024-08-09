@@ -6,6 +6,7 @@ import zipfile
 import requests
 import base64
 from sys import exit as sys_exit
+from sys import stdout
 
 from lzma import decompress, FORMAT_XZ
 from shutil import rmtree, move, copy
@@ -16,13 +17,15 @@ from androguard.core.axml import AXMLPrinter
 from androguard.core.dex import DEX
 from androguard.util import set_log
 
+from loguru import logger
+
 import pyaxml
 try:
     from lxml import etree
-    print("[DEBUG] Running with lxml.etree")
+#    logger.debug ("[DEBUG] Running with lxml.etree")
 except ImportError:
     import xml.etree.ElementTree as etree
-    print ("[DEBUG] Running with Python's xml.etree.ElementTree")
+#    logger.debug ("[DEBUG] Running with Python's xml.etree.ElementTree")
 
 import jpype
 import jpype.imports
@@ -40,10 +43,10 @@ from java.io import (
 try:
     from ApkPatcher import Patcher
 except UnsupportedClassVersionError as e:
-    print (f"[ERROR] {e}")
-    print (f"[DEBUG] Using JVM at {jpype.getDefaultJVMPath ()}")
-    print (f"(FIX) -> Try to recompile the Java library. See './Java/APK patcher/README.md'")
-    print (f"(FIX 2) -> If you have another version of Java installed, try that one instead")
+    logger.critical (f"{e}")
+    logger.debug (f"Using JVM at {jpype.getDefaultJVMPath ()}")
+    logger.error (f"(FIX) -> Try to recompile the Java library. See './Java/APK patcher/README.md'")
+    logger.error (f"(FIX 2) -> If you have another version of Java installed, try that one instead")
     sys_exit (-1)
 
 
@@ -117,6 +120,13 @@ def parse_args ():
             dest = "gadget_config",
             type = argparse.FileType ("r"),
             help = "Path to a custom Gadget config ( https://frida.re/docs/gadget/ )"
+        )
+
+    parser.add_argument (
+            '-v', '--verbose',
+            action = "count",
+            default = 0,
+            help = "Increase the verbosity. Can be specified up to 3 times."
         )
 
     parser.add_argument (
@@ -242,7 +252,7 @@ def get_entry_points (main_apk_path):
             # Therefore, and since Python's default XML parser doesn't support .getparent(), the XPath must go directly to the parent
             # using '/..' (looks like Python libraries don't support '/parent::*' )
             xpath = f".//activity/intent-filter/action[@{android_name}='android.intent.action.MAIN']/../.."
-            print (f'[DEBUG] Searching for the entry point using the following XPath: `{xpath}`')
+            logger.debug (f'Searching for the entry point using the following XPath: `{xpath}`')
             main_activities = xml.findall (xpath)
 
             # If none was found, maybe the activity was defined as an 'activity-alias':
@@ -256,7 +266,7 @@ def get_entry_points (main_apk_path):
             if search_alias:
                 xpath = f".//activity-alias/intent-filter/action[@{android_name}='android.intent.action.MAIN']/../.."
 
-                print ("[DEBUG] No main activity was found using the previous filter. Trying with <activity-alias>...")
+                logger.debug ("No main activity was found using the previous filter. Trying with <activity-alias>...")
                 main_activities = xml.findall (xpath)
 
             # Python libraries also don't seem to support '/@attrib' to get the attribute directly, so I guess we'll have to do it by hand...
@@ -278,7 +288,7 @@ def java_patch_bytecode (dex_raw_bytes, dex_version, main_class, init_method):
     class_name = main_class.name
     method_name = init_method.name
 
-    print (f"[DEBUG] Interfacing with the Java patcher to modify {class_name}->{method_name}" +
+    logger.debug (f"Interfacing with the Java patcher to modify {class_name}->{method_name}" +
         f"// Dex version: {dex_version}")
 
     j_dexBytes = ByteArrayInputStream (dex_raw_bytes)
@@ -292,7 +302,7 @@ def java_patch_bytecode (dex_raw_bytes, dex_version, main_class, init_method):
         output = bytes (j_output.toByteArray ())
 
     except IOException as e:
-        print (f"[ERROR] Exception from Java at patchDexFile(): {e} ")
+        logger.error (f"Exception from Java at patchDexFile(): {e} ")
 
     return output
 
@@ -369,7 +379,7 @@ def patch_bytecode (main_apk_path, mod_apk_path, target_classes):
             if (not done) and filename.endswith (".dex"):
 
                 dex_bytes = apk.open (filename, "r").read ()
-                print (f"[INFO] Parsing {filename}...")
+                logger.info (f"Parsing {filename}...")
                 data = DEX (dex_bytes)
 
                 for t in target_classes:
@@ -391,12 +401,12 @@ def patch_bytecode (main_apk_path, mod_apk_path, target_classes):
                     main_class = main_class [0]
 
                     init_method = get_init_method (main_class)
-                    print (f"[INFO] Found init method: {init_method}")
+                    logger.info (f"Found init method: {init_method}")
 
                     patched_dex = java_patch_bytecode (dex_bytes, data.version, main_class, init_method)
 
                     if not patched_dex:
-                        print ("[ERROR] Couldn't patch the desired method")
+                        logger.error ("Couldn't patch the desired method")
                         return False
 
                     copy_to_zip (apk, apk_mod, filename, patched_dex)
@@ -422,12 +432,12 @@ def get_arch_from_filename (filename):
     abi = filename.stem.split (".")[-1]
     all_arch = [ ABI_MAPPING[x] for x in ABI_MAPPING ]
 
-    print (f"[DEBUG] Deducted ABI from file {filename}: {abi}")
+    logger.debug (f"Deducted ABI from file {filename}: {abi}")
 
     # Filenames do not have '-', but use '_'
     abi = abi.replace ("_", "-")
     if not abi in ABI_MAPPING:
-        print (f"[DEBUG] Failed to find {abi} within the ABI_MAPPING: {ABI_MAPPING}")
+        logger.debug (f"Failed to find {abi} within the ABI_MAPPING: {ABI_MAPPING}")
         return all_arch
 
     return [ ABI_MAPPING [abi] ]
@@ -452,15 +462,15 @@ def add_native_lib_to_apk (apk_path, out_path, frida_script = None, gadget_confi
     """
     architectures = get_arch_from_filename (apk_path)
 
-    print (f"[INFO] Requesting {FRIDA_ASSETS_URL}")
+    logger.info (f"Requesting {FRIDA_ASSETS_URL}")
     r = requests.get (FRIDA_ASSETS_URL)
     if r.status_code != 200:
-        print (f"[ERROR] Couldn't GET {FRIDA_ASSETS_URL} . Response code: {r.status_code} {r.reason}")
+        logger.error (f"Couldn't GET {FRIDA_ASSETS_URL} . Response code: {r.status_code} {r.reason}")
         return
 
     frida_releases = r.json ()
     frida_version = frida_releases ["tag_name"]
-    print (f"[INFO] Using Frida version {frida_version} (latest)")
+    logger.info (f"Using Frida version {frida_version} (latest)")
 
     frida_assets = frida_releases ["assets"]
 
@@ -475,18 +485,18 @@ def add_native_lib_to_apk (apk_path, out_path, frida_script = None, gadget_confi
 
         # Then, the new items
         for arch in architectures:
-            print (f"[INFO] Processing architecture {arch}")
+            logger.info (f"Processing architecture {arch}")
 
             target = f"frida-gadget-{frida_version}-android-{arch}.so.xz"
 
             for asset in frida_assets:
                 if asset ["name"] == target:
                     download_url = asset ["browser_download_url"]
-                    print (f"[INFO] Located {target} @ {download_url}")
+                    logger.info (f"Located {target} @ {download_url}")
 
                     with requests.get (download_url, stream = True) as r:
                         if r.status_code != 200:
-                            print (f"[ERROR] Couldn't GET {FRIDA_ASSETS_URL} . Response code: {r.status_code} {r.reason}")
+                            logger.info (f"Couldn't GET {FRIDA_ASSETS_URL} . Response code: {r.status_code} {r.reason}")
                             continue
 
                         lib_xz = r.content
@@ -502,7 +512,7 @@ def add_native_lib_to_apk (apk_path, out_path, frida_script = None, gadget_confi
                             out_apk.writestr (f"lib/{dirname}/libgadget.config.so", gadget_config)
                         if frida_script:
                             out_apk.writestr (f"lib/{dirname}/libgadget.js.so", frida_script)
-                        print (f"[DEBUG] Added all *.so to {out_path}!lib/{dirname}/")
+                        logger.debug (f"Added all *.so to {out_path}!lib/{dirname}/")
 
 
 def get_full_filelist (parts, use_basename = False):
@@ -596,7 +606,7 @@ def set_extract_native_libs (manifest_xml):
         if not app.attrib [android_extractNativeLibs] \
             or app.attrib [android_extractNativeLibs] == "false":
 
-            print ("[DEBUG] android:extractNativeLibs was set to false. Patching...")
+            logger.debug ("android:extractNativeLibs was set to false. Patching...")
             app.attrib [android_extractNativeLibs] = "true"
 
 
@@ -624,12 +634,12 @@ def fix_manifest (apk_path, out_path):
 
                 inet_perm = "android.permission.INTERNET"
                 if not permission_exists (xml, inet_perm):
-                    print (f"[DEBUG] No {inet_perm} permission.")
-                    print ("[WARNING] It's possible that the gadget has no internet connectivity. Check `logcat` for messages like `Frida: Failed to start: Unable to create socket: Operation not permitted`")
+                    logger.debug (f"No {inet_perm} permission.")
+                    logger.warning ("It's possible that the gadget has no internet connectivity. Check `logcat` for messages like `Frida: Failed to start: Unable to create socket: Operation not permitted`")
                     # FIXME
  #                   add_permission (xml, inet_perm)
                 else:
-                    print (f"[DEBUG] App has {inet_perm} permission.")
+                    logger.debug (f"App has {inet_perm} permission.")
 
                 set_extract_native_libs (xml)
 #                print (etree.tostring (xml, pretty_print = True).decode ("utf-8"))
@@ -652,13 +662,28 @@ def fix_manifest (apk_path, out_path):
 
             info = in_apk.getinfo (filename)
             copy_to_zip (in_apk, out_apk, filename, reencoded_axml.pack ())
-#            print ("[WARNING][FIXME] Patching of the AndroidManifest.xml tends to fail. Discarding patch...")
+#            logger.warning ("[FIXME] Patching of the AndroidManifest.xml tends to fail. Discarding patch...")
 #            copy_to_zip (in_apk, out_apk, filename)
 
 
 if __name__ == "__main__":
-    set_log ("ERROR") # Androguard logger
+
     args = parse_args ()
+
+    verbosity = args.verbose
+    levels = [ "SUCCESS", "INFO", "DEBUG", "TRACE" ]
+    log_level = min ( len (levels) - 1, verbosity )
+
+    logger.remove () # Removes the Androguard logger
+    logger.add (
+        stdout,
+        format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level:<8}</level> | <level>{message}</level>",
+        filter = __name__,
+        level = levels [log_level],
+        colorize = True
+    )
+
+    logger.info (f"Set debugging level to {levels [log_level]}")
 
     ####
     # Preparation of the environment
@@ -667,12 +692,12 @@ if __name__ == "__main__":
     rmtree (OUT_DIR, ignore_errors = True)
     OUT_DIR.mkdir (parents = True)
 
-    print (f"[INFO] Using {OUT_DIR} as working directory.")
+    logger.info (f"Using {OUT_DIR} as working directory.")
     ####
 
     # 1: Locate all files that belong to this app
     parts = find_apk_parts (args.base_path)
-    print (f"[INFO] Found parts: {get_full_filelist (parts, True)}")
+    logger.info (f"Found parts: {get_full_filelist (parts, True)}")
 
     main_apk_path = parts ["main"]
     mod_apk_path = OUT_DIR / main_apk_path.name
@@ -681,27 +706,27 @@ if __name__ == "__main__":
     entry_points = get_entry_points (main_apk_path)
 
     if not entry_points:
-        print ("[ERROR] Couldn't locate the entry point")
+        logger.error ("Couldn't locate the entry point")
         sys_exit (-2)
 
-    print (f"[INFO] Found entry point(s): {entry_points}")
+    logger.info (f"Found entry point(s): {entry_points}")
 
     # 3: Patch the entrypoints' Bytecode
     patched = patch_bytecode (main_apk_path, mod_apk_path, entry_points)
     if not patched:
-        print ("[ERROR] Couldn't patch the Bytecode")
+        logger.critical ("Couldn't patch the Bytecode")
         sys_exit (-3)
 
     # 4: Download Frida and add it to the lib/ directory
     frida_script = None
     if args.frida_script:
         frida_script = args.frida_script.read ()
-        print (f"[DEBUG] Using the following Frida script:\n{frida_script.decode ('utf-8')}\n")
+        logger.debug (f"Using the following Frida script:\n{frida_script.decode ('utf-8')}\n")
 
     gadget_config = None
     if args.gadget_config:
         gadget_config = args.gadget_config.read ()
-        print (f"[DEBUG] Using the following Gadget config:\n{gadget_config.decode ('utf-8')}\n")
+        logger.debug (f"Using the following Gadget config:\n{gadget_config.decode ('utf-8')}\n")
 
     if "abi" in parts:
 
@@ -729,21 +754,21 @@ if __name__ == "__main__":
 
     for f in files:
         out_path = OUT_DIR / f.name
-        print (f"[DEBUG] Processing {out_path}")
+        logger.debug (f"Processing {out_path}")
 
         if not out_path.exists ():
-            print (f"[DEBUG] Copying unmodified file: {f}")
+            logger.debug (f"Copying unmodified file: {f}")
             copy (f, out_path)
 
     # 7: zipalign everything
-        print (f"[DEBUG] Zipaligning...")
+        logger.debug ("Zipaligning...")
         Patcher.zipAlign (str (out_path))
 
     # 8: sign everything
         # We have to sign all parts with the same key, regardless of whether
         # we modified them or not
-        print (f"[DEBUG] Signing...")
+        logger.debug ("Signing...")
         tmp_file = str (Patcher.signApk (str (out_path), keystore_data))
         move (tmp_file, out_path)
 
-    print (f"[+] All done! The output APK can be found at {OUT_DIR}")
+    logger.success (f"[+] All done! The output APK can be found at {OUT_DIR}")

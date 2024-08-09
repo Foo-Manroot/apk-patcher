@@ -1,4 +1,5 @@
-androguard 
+androguard
+loguru # It's dead easy to use and androguard already uses it, so...
 JPype1
 requests
 pyaxml
