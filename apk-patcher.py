@@ -331,9 +331,10 @@ def patch_bytecode (main_apk_path, mod_apk_path, target_classes):
         zipfile.ZipFile (main_apk_path, "r") as apk,
         zipfile.ZipFile (mod_apk_path, "w") as apk_mod
     ):
+        done = False
         for filename in apk.namelist ():
 
-            if filename.endswith (".dex"):
+            if (not done) and filename.endswith (".dex"):
 
                 dex_bytes = apk.open (filename, "r").read ()
                 print (f"[INFO] Parsing {filename}...")
@@ -364,15 +365,16 @@ def patch_bytecode (main_apk_path, mod_apk_path, target_classes):
 
                     if not patched_dex:
                         print ("[ERROR] Couldn't patch the desired method")
-                        continue
+                        return False
 
                     copy_to_zip (apk, apk_mod, filename, patched_dex)
+                    done = True
 
             else:
                 copy_to_zip (apk, apk_mod, filename)
 
 
-    return True
+    return done
 
 
 def get_arch_from_filename (filename):
@@ -615,7 +617,7 @@ def fix_manifest (apk_path, out_path):
             #################
 
             info = in_apk.getinfo (filename)
-            out_apk.writestr (info, reencoded_axml.pack ())
+            copy_to_zip (in_apk, out_apk, filename, reencoded_axml.pack ())
 #            print ("[WARNING][FIXME] Patching of the AndroidManifest.xml tends to fail. Discarding patch...")
 #            copy_to_zip (in_apk, out_apk, filename)
 
@@ -651,11 +653,16 @@ if __name__ == "__main__":
     print (f"[INFO] Found entry point(s): {entry_points}")
 
     # 3: Patch the entrypoints' Bytecode
-    patch_bytecode (main_apk_path, mod_apk_path, entry_points)
+    patched = patch_bytecode (main_apk_path, mod_apk_path, entry_points)
+    if not patched:
+        print ("[ERROR] Couldn't patch the Bytecode")
+        sys_exit (-3)
 
     # 4: Download Frida and add it to the lib/ directory
 
     frida_script = args.frida_script.read ()
+    print (f"[DEBUG] Using the following Frida config:\n{GADGET_CONFIG.decode ('utf-8')}\n")
+    print (f"[DEBUG] Using the following Frida script:\n{frida_script.decode ('utf-8')}\n")
 
     if "abi" in parts:
 
