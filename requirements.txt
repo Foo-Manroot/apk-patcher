@@ -1,0 +1,4 @@
+androguard 
+JPype1
+requests
+pyaxml
