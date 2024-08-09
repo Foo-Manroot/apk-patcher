@@ -103,14 +103,14 @@ def parse_args ():
                     "  - com.example.1234.config.armeabi_v7a.apk\n"
                     "  - com.example.1234.config.en.apk\n"
                     "  - com.example.1234.config.xxhdpi.apk\n\n"
-                    "'base-name' must be \"com.example.1234.\"\n"
+                    "'base-name' must be \"com.example.1234.\" (note the dot at the end)\n"
                 )
         )
 
     parser.add_argument (
             '-f', '--fix_manifest',
             help = (
-                "If set, the script will attempt to modify AndroidManifest.xml to set extractNativeLibs=true. "
+                "If set, the script will attempt to modify AndroidManifest.xml to set extractNativeLibs=true.\n"
                 "ATTENTION: it may cause problems like 'INSTALL_PARSE_FAILED_UNEXPECTED_EXCEPTION' on installation."
             )
         )

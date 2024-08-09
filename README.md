@@ -34,7 +34,7 @@ Additionally, the following Java libraries must be present for the patcher to wo
 
 Just run the script and read the help message:
 ```
-$ $ python apk-patcher.py test-apks/com.duolingo.  -vvvv -h
+$ python apk-patcher.py -h
 usage: APK patcher [-h] [-f FIX_MANIFEST] [-c GADGET_CONFIG] [-v] [-l frida_script] base_path
 
 Script to automate the decompilation, patch and rebuild of any Android split applications (those apps that have base.apk, plus .config.<something>.apk) to inject the provided Frida script.
@@ -47,12 +47,13 @@ positional arguments:
                           - com.example.1234.config.en.apk
                           - com.example.1234.config.xxhdpi.apk
 
-                        'base-name' must be "com.example.1234."
+                        'base-name' must be "com.example.1234." (note the dot at the end)
 
 options:
   -h, --help            show this help message and exit
   -f FIX_MANIFEST, --fix_manifest FIX_MANIFEST
-                        If set, the script will attempt to modify AndroidManifest.xml to set extractNativeLibs=true. ATTENTION: it may cause problems like 'INSTALL_PARSE_FAILED_UNEXPECTED_EXCEPTION' on installation.
+                        If set, the script will attempt to modify AndroidManifest.xml to set extractNativeLibs=true.
+                        ATTENTION: it may cause problems like 'INSTALL_PARSE_FAILED_UNEXPECTED_EXCEPTION' on installation.
   -c GADGET_CONFIG, --config GADGET_CONFIG
                         Path to a custom Gadget config ( https://frida.re/docs/gadget/ )
   -v, --verbose         Increase the verbosity. Can be specified up to 3 times.
