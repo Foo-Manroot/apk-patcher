@@ -223,7 +223,7 @@ def get_entry_points (main_apk_path):
             #
             # Therefore, and since Python's default XML parser doesn't support .getparent(), the XPath must go directly to the parent
             # using '/..' (looks like Python libraries don't support '/parent::*' )
-            xpath = f".//activity-alias/intent-filter/action[@{android_name}='android.intent.action.MAIN']/../.."
+            xpath = f".//*/intent-filter/action[@{android_name}='android.intent.action.MAIN']/../.."
             print (f'[DEBUG] Searching for the entry point using the following XPath: `{xpath}`')
             main_activities = xml.findall (xpath)
 
