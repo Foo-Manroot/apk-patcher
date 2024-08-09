@@ -34,25 +34,30 @@ Additionally, the following Java libraries must be present for the patcher to wo
 
 Just run the script and read the help message:
 ```
-$ python apk-patcher.py --help
-[DEBUG] Running with lxml.etree
-usage: APK patcher [-h] base_path frida_script
+$ $ python apk-patcher.py test-apks/com.duolingo.  -vvvv -h
+usage: APK patcher [-h] [-f FIX_MANIFEST] [-c GADGET_CONFIG] [-v] [-l frida_script] base_path
 
 Script to automate the decompilation, patch and rebuild of any Android split applications (those apps that have base.apk, plus .config.<something>.apk) to inject the provided Frida script.
 
 positional arguments:
-  base_path     Common prefix for all the split apk files.
-                For example, if we have:
-                  - com.example.1234.apk
-                  - com.example.1234.config.armeabi_v7a.apk
-                  - com.example.1234.config.en.apk
-                  - com.example.1234.config.xxhdpi.apk
+  base_path             Common prefix for all the split apk files.
+                        For example, if we have:
+                          - com.example.1234.apk
+                          - com.example.1234.config.armeabi_v7a.apk
+                          - com.example.1234.config.en.apk
+                          - com.example.1234.config.xxhdpi.apk
 
-                'base-name' must be "com.example.1234."
-  frida_script  The JS file to patch into the apk.
+                        'base-name' must be "com.example.1234."
 
 options:
-  -h, --help    show this help message and exit
+  -h, --help            show this help message and exit
+  -f FIX_MANIFEST, --fix_manifest FIX_MANIFEST
+                        If set, the script will attempt to modify AndroidManifest.xml to set extractNativeLibs=true. ATTENTION: it may cause problems like 'INSTALL_PARSE_FAILED_UNEXPECTED_EXCEPTION' on installation.
+  -c GADGET_CONFIG, --config GADGET_CONFIG
+                        Path to a custom Gadget config ( https://frida.re/docs/gadget/ )
+  -v, --verbose         Increase the verbosity. Can be specified up to 3 times.
+  -l frida_script, --load frida_script
+                        The JS file to patch into the apk.
 ```
 
 # Comparison with other tools
