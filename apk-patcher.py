@@ -5,6 +5,7 @@ import re
 import zipfile
 import requests
 import base64
+from sys import exit as sys_exit
 
 from lzma import decompress, FORMAT_XZ
 from shutil import rmtree, move, copy
@@ -43,8 +44,7 @@ except UnsupportedClassVersionError as e:
     print (f"[DEBUG] Using JVM at {jpype.getDefaultJVMPath ()}")
     print (f"(FIX) -> Try to recompile the Java library. See './Java/APK patcher/README.md'")
     print (f"(FIX 2) -> If you have another version of Java installed, try that one instead")
-    import sys
-    sys.exit (-1)
+    sys_exit (-1)
 
 
 
@@ -817,6 +817,10 @@ if __name__ == "__main__":
 
     # 2: Find the entry point(s)
     entry_points = get_entry_points (main_apk_path)
+
+    if len (entry_points) <= 0:
+        print ("[ERROR] Couldn't locate the entry point")
+        sys_exit (-2)
 
     print (f"[INFO] Found entry point(s): {entry_points}")
 
