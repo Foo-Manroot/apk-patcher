@@ -237,138 +237,6 @@ def get_entry_points (main_apk_path):
     return entry_points
 
 
-#def gen_patch_stub (dex, method):
-#    """
-#    Generates the stub to load "libgadget.so"
-#
-#    Args:
-#        dex :androguard.core.dex.DEX
-#            Reference to the DEX where the given method was defined.
-#            Needed to fix the string/method references.
-#
-#        method :androguard.core.dex.EncodedMethod
-#            Method where the stub is going to be prepended
-#
-#    Returns:
-#        [:androguard.core.dex.Instruction]
-#        A list with the DEX instructions
-#    """
-#    # https://source.android.com/docs/core/runtime/dalvik-bytecode
-#    # http://pallergabor.uw.hu/androidblog/dalvik_opcodes.html
-#    # https://github.com/androguard/androguard/blob/master/androguard/core/dex/__init__.py
-#
-#    class_mgr = dex.get_class_manager ()
-#    n_registers = method.code.get_registers_size ()
-##    n_strings = dex.get_len_strings ()
-##
-##    print ("==============")
-##    print (f"n_strings before: {dex.get_len_strings ()}")
-##
-##    #dex.strings.append (
-##    #        StringDataItem (
-##    #                # Null-terminated for the DEX class to interpret it correctly, or smth (?)
-##    #                # idk, it hangs otherwise:
-##    #                #   Traceback (most recent call last):
-##    #                # File "...\androguard\core\dex\__init__.py", line 1991, in __init__
-##    #                #    self.data = read_null_terminated_string(buff)
-##    #                #                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-##    #                #  File "...\androguard\core\dex\__init__.py", line 108, in read_null_terminated_string
-##    #                #    while True:
-##    #                #          ^^^^
-##    #                BytesIO (b"gadget\x00"),
-##    #                class_mgr
-##    #            )
-##    #    )
-##
-##    mi = MapItem (
-##            BytesIO (
-##                    # Little endian !!!
-##                    b"\x02\x20" + # Type // https://source.android.com/docs/core/runtime/dex-format#type-codes
-##                    b"\x01\x23" + # unused (?)
-##                    b"\x01\x00\x00\x00" + # size
-##                    b"\x00\x00\x00\x00" + # Offset (start of the string, or smth)
-##                    b"gadget\x00"
-##                ),
-##            class_mgr
-##        )
-##    mi.parse ()
-##    class_mgr.add_type_item (
-##            mi.get_type (),
-##            mi,
-##            list (mi.get_item ())
-##        )
-##    #class_mgr.set_hook_string (n_strings, "gadget")
-##    print (len (dex.strings))
-##
-##    print (f"n_strings after: {dex.get_len_strings ()}")
-##
-##    i = -1
-##    s = ""
-##    while s != "AG:IS: invalid string":
-##        i += 1
-##        s = class_mgr.get_string (i)
-##
-##    print (f"cm string@[{i-1}]: {class_mgr.get_string (i-1)}")
-#
-##    load_lib = dex.get_classes_def_item ().get_method ("Ljava/lang/System;", "loadLibrary")
-##
-##    if load_lib:
-##        load_lib = load_lib[0]
-##    else:
-##        # loadLibrary() was not found in the current DEX
-##        load_lib = dex.get_classes_def_item ().get_method ("Lch/admin/swisstopo/SwisstopoApplication;", "onCreate")[0]
-##        print (load_lib)
-##        instructions = list (load_lib.get_instructions ())
-##
-##        ####
-##        for ins in instructions:
-##            print(ins.get_op_value(), ins.get_name(), ins.get_output(), ins.get_hex())
-##
-##        for s in dex.get_string_data_item ():
-##            if "swisstopo_app_shared" in s.get ():
-##                s.show ()
-##                print (s.get_off ())
-##
-##        load_lib = dex.get_class_manager ().get_method_ref (0x8c2f)
-##        load_lib.show ()
-#
-#    # I didn't find any other way to access the external method declarations
-#    # loadLibrary() is part of the Android API, so it will not appear in the methods defined by the APK.
-#    # Instead, just a string will be used to reference it (or smth, idk?)
-#    method_ref_idx = None
-#
-#    methods = dex.get_class_manager ()._ClassManager__manage_item[TypeMapItem.METHOD_ID_ITEM]
-#
-#    for i, m in enumerate (methods.gets ()):
-#        if m.get_name () == "loadLibrary" \
-#        and m.get_class_name () == "Ljava/lang/System;":
-#            print (f"[INFO] Found loadLibrary at index {i}")
-#            m.show ()
-#            method_ref_idx = i
-#
-#    if not method_ref_idx:
-#        # TODO: add `System.loadLibrary()` import
-#        raise IndexError ("Couldn't find java.lang.System.loadLibrary() on the existing imports")
-#
-##    print ("//////////////")
-#
-#    return [
-#        Instruction21c (class_mgr,
-#                # const-string vXX, "gadget"
-#                pack ("B", 0x1a) + # Opcode
-#                pack ("B", n_registers % 0xFF) + # destination register (8 bits)
-#                pack ("<H", 44339) # string index (44339 => "zoomToTrack")
-#            ),
-#        Instruction35c (class_mgr,
-#                # invoke-static {vXX}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V
-#                pack ("B", 0x71) + # Opcode
-#                pack ("B", 0x1 << 4) + # Arg count (4 bits)
-#                pack ("<H", method_ref_idx) + # method reference (16 bits)
-#                pack ("<H", n_registers % 0xFF) # Arg register (4 bits each)
-#            )
-#    ]
-
-
 def java_patch_bytecode (dex_raw_bytes, dex_version, main_class, init_method):
     """
     Interfaces with the custom patcher written in Java, which uses the dexlib2 library.
@@ -407,15 +275,6 @@ def get_init_method (main_class):
                     main_class.get_methods ()
                 )
         )[0]
-
-#    # I have no clue what the difference between <clinit> and <init> is, so we just take the first one found and roll with it
-#    # In any case, at least one of the two must always exist (afaik...)
-#    init_method = list (
-#            filter (
-#                    lambda x: x.get_name () == "<clinit>" or x.get_name () == "<init>",
-#                    main_class.get_methods ()
-#                )
-#        )[0]
 
     return init_method
 
@@ -472,14 +331,6 @@ def patch_bytecode (main_apk_path, mod_apk_path, target_classes):
         zipfile.ZipFile (main_apk_path, "r") as apk,
         zipfile.ZipFile (mod_apk_path, "w") as apk_mod
     ):
-#        dex_list = list (
-#                filter (
-#                        lambda x: x.endswith (".dex"),
-#                        apk.namelist ()
-#                    )
-#            )
-
-#        for dex_file in dex_list:
         for filename in apk.namelist ():
 
             if filename.endswith (".dex"):
@@ -520,30 +371,6 @@ def patch_bytecode (main_apk_path, mod_apk_path, target_classes):
             else:
                 copy_to_zip (apk, apk_mod, filename)
 
-#                instructions = gen_patch_stub (data, init_method) \
-#                            + list (init_method.get_instructions ())
-#
-#                init_method.set_instructions (instructions)
-#                init_method.reload ()
-#
-#                print ("[INFO] Patched method:")
-#                init_method.show ()
-#
-#                print ("[INFO] Saving patched DEX")
-#                data._flush ()
-#                new_data = data.save ()
-#                with open (f"{dex_file}.MODIFIED", "wb") as f:
-#                    written = f.write (new_data)
-#                    if written > 0:
-#                        print (f"[INFO] Wrote {written} Bytes into '{dex_file}.MODIFIED' successfully")
-#                    else:
-#                        print (f"[ERROR] Couldn't write modified DEX file")
-
-                ####
-#                for ins in instructions:
-#                    print(ins.get_op_value(), ins.get_name(), ins.get_output(), ins.get_hex())
-#                return False
-                ####
 
     return True
 
@@ -711,15 +538,6 @@ def add_permission (manifest_xml, permission_name):
     The permission name must be the full one (i.e.: "android.permission.INTERNET", not just "INTERNET")
     """
     android_name = "{http://schemas.android.com/apk/res/android}name"
-
-#    for i in range (len (manifest_xml)):
-#
-#        if manifest_xml[i].tag == 'application' or manifest_xml[i].tag == 'uses-permission':
-#            new_perm = etree.Element ("uses-permission")
-#            new_perm.attrib [android_name] = permission_name
-#
-#            manifest_xml.insert (i, new_perm)
-#            break
 
     new_perm = etree.Element ("uses-permission")
     new_perm.attrib [android_name] = permission_name
