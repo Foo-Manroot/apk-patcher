@@ -211,17 +211,24 @@ def get_entry_points (main_apk_path):
             android_name = "{http://schemas.android.com/apk/res/android}name"
             # We're looking for any activity (or activity-alias) wtih action="android.intent.action.MAIN", regardless of its category
             # There might be multiple main activities, depending on how it is launched: https://stackoverflow.com/a/75269947
-            main_actions = xml.findall (f".//*/intent-filter/action[@{android_name}='android.intent.action.MAIN']")
+            #
+            # We expect the following hierarchy:
+            #  <activity android:theme=...>
+            #    <intent-filter>
+            #      <action android:name="android.intent.action.MAIN"/>
+            #      <category android:name="android.intent.category.LAUNCHER"/>
+            #      <action android:name="android.intent.action.VIEW"/>
+            #    </intent-filter>
+            #  </activity>
+            #
+            # Therefore, and since Python's default XML parser doesn't support .getparent(), the XPath must go directly to the parent
+            # using '/..' (looks like Python libraries don't support '/parent::*' )
+            xpath = f".//activity-alias/intent-filter/action[@{android_name}='android.intent.action.MAIN']/../.."
+            print (f'[DEBUG] Searching for the entry point using the following XPath: `{xpath}`')
+            main_activities = xml.findall (xpath)
 
-            for action in main_actions:
-                # We expect the following hierarchy:
-                #  <activity android:theme=...>
-                #  <intent-filter>
-                #    <action android:name="android.intent.action.MAIN"/>
-                #    <category android:name="android.intent.category.LAUNCHER"/>
-                #    <action android:name="android.intent.action.VIEW"/>
-                #  </intent-filter>
-                activity = action.getparent ().getparent ()
+            # Python libraries also don't seem to support '/@attrib' to get the attribute directly, so I guess we'll have to do it by hand...
+            for activity in main_activities:
                 name = activity.get (android_name)
 
                 if name not in entry_points:
