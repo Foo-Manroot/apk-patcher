@@ -114,6 +114,7 @@ def parse_args ():
 
     parser.add_argument (
             '-c', '--config',
+            dest = "gadget_config",
             type = argparse.FileType ("r"),
             help = "Path to a custom Gadget config ( https://frida.re/docs/gadget/ )"
         )
