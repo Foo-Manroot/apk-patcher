@@ -208,9 +208,10 @@ def get_entry_points (main_apk_path):
             parsed = AXMLPrinter (manifest.read ())
             xml = parsed.get_xml_obj ()
 
-            # We're looking for any activity wtih action="android.intent.action.MAIN", regardless of its category
+            android_name = "{http://schemas.android.com/apk/res/android}name"
+            # We're looking for any activity (or activity-alias) wtih action="android.intent.action.MAIN", regardless of its category
             # There might be multiple main activities, depending on how it is launched: https://stackoverflow.com/a/75269947
-            main_actions = xml.findall (".//activity/intent-filter/action[@{http://schemas.android.com/apk/res/android}name='android.intent.action.MAIN']")
+            main_actions = xml.findall (f".//*/intent-filter/action[@{android_name}='android.intent.action.MAIN']")
 
             for action in main_actions:
                 # We expect the following hierarchy:
@@ -221,7 +222,7 @@ def get_entry_points (main_apk_path):
                 #    <action android:name="android.intent.action.VIEW"/>
                 #  </intent-filter>
                 activity = action.getparent ().getparent ()
-                name = activity.get ("{http://schemas.android.com/apk/res/android}name")
+                name = activity.get (android_name)
 
                 if name not in entry_points:
                     entry_points.append (name)
