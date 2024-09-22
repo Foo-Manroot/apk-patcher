@@ -25,7 +25,7 @@ $ . venv/bin/activate
 
 Additionally, the following Java libraries must be present for the patcher to work end-to-end:
   - [./java_libs/apksig-8.7.0-alpha04.jar](https://dl.google.com/android/maven2/com/android/tools/build/apksig/8.7.0-alpha04/apksig-8.7.0-alpha04.jar)
-  - [./java_libs/dexlib2-3.0.7-d09ec39b-dirty.jar](https://github.com/Foo-Manroot/smali)
+  - [./java_libs/dexlib2-3.0.8.jar](https://github.com/google/smali)
   - [./java_libs/guava-33.2.1-jre.jar](https://repo1.maven.org/maven2/com/google/guava/guava/33.2.1-jre/guava-33.2.1-jre.jar)
   - [./java_libs/zipalign-java-v1.1.3.jar](https://jitpack.io/#Iyxan23/zipalign-java/v1.1.3)
   - ./Java/APK patcher/app/build/libs/app.jar
