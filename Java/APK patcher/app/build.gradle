@@ -19,8 +19,8 @@ repositories {
 
 dependencies {
 
-//    implementation 'com.android.tools.smali:smali-dexlib2:3.0.7';
-    implementation files('libs/dexlib2-3.0.7-0d1f58f4-dirty.jar');
+    implementation 'com.android.tools.smali:smali-dexlib2:3.0.8';
+//    implementation files('libs/dexlib2-3.0.7-0d1f58f4-dirty.jar');
 ////    implementation 'com.android.tools.smali:smali:3.0.7'
 //    implementation files('libs/smali-3.0.7-d09ec39b-dirty.jar');
 ////    implementation 'com.android.tools.smali:smali-baksmali:3.0.7'

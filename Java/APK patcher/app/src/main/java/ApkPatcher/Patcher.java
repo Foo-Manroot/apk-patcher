@@ -3,8 +3,6 @@ package ApkPatcher;
 import com.android.apksig.ApkSigner;
 import com.android.apksig.KeyConfig;
 import com.android.apksig.apk.ApkFormatException;
-import com.android.apksig.util.DataSinks;
-import com.android.apksig.util.ReadableDataSink;
 import com.android.tools.smali.dexlib2.Opcode;
 import com.android.tools.smali.dexlib2.Opcodes;
 import com.android.tools.smali.dexlib2.builder.MutableMethodImplementation;
@@ -13,8 +11,12 @@ import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction35c
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedMethod;
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedMethodImplementation;
+import com.android.tools.smali.dexlib2.dexbacked.instruction.DexBackedInstruction;
+import com.android.tools.smali.dexlib2.dexbacked.instruction.DexBackedInstruction10x;
+import com.android.tools.smali.dexlib2.dexbacked.instruction.DexBackedInstruction35c;
 import com.android.tools.smali.dexlib2.iface.DexFile;
 import com.android.tools.smali.dexlib2.iface.MethodImplementation;
+import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
 import com.android.tools.smali.dexlib2.immutable.reference.ImmutableMethodReference;
 import com.android.tools.smali.dexlib2.immutable.reference.ImmutableStringReference;
 import com.android.tools.smali.dexlib2.rewriter.DexRewriter;
@@ -29,13 +31,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.file.FileSystemException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.KeyPairGenerator;
@@ -71,18 +68,35 @@ public class Patcher {
             return implementation;
         }
         
-        MutableMethodImplementation mutableImplementation = new MutableMethodImplementation (implementation);
+//        MutableMethodImplementation mutableImplementation = new MutableMethodImplementation (implementation);
 
-        /* We can use v0 because this is the first instruction (so, no other value was introduced
+        /* ~~We can use v0 because this is the first instruction (so, no other value was introduced
         yet) and we don't really care if the next instruction stomps it, after we've loaded our
-        library */
+        library~~ <-- Not true, unfortunately
+	Turns out we do actually need to take care of this shit, because sometimes there are no local registers available.
+	For example, with Flutter, only p0 is available:
 
+		.method public constructor <init>()V
+		    .registers 1
+
+		    invoke-direct {p0}, Lio/flutter/embedding/android/f;-><init>()V
+
+		    return-void
+		.end method
+
+	Since p0 is a parameter, we get `java.lang.VerifyError: Rejecting class [...] because it failed compile-time verification`
+
+        MethodImplOverride takes care of returning an extra register when required.
+       	*/
+        MethodImplOverride implOverride = new MethodImplOverride (implementation);
+        MutableMethodImplementation mutableImplementation = new MutableMethodImplementation (implOverride);
+        
         // const-string v0, "gadget"
         mutableImplementation.addInstruction (0,
             new BuilderInstruction21c (
-                Opcode.CONST_STRING,
-                0,
-                new ImmutableStringReference("gadget")
+                Opcode.CONST_STRING, // Opcode opcode
+                0, // int registerA
+                new ImmutableStringReference("gadget") // Reference reference
             )
         );
 
@@ -92,11 +106,11 @@ public class Patcher {
 
         mutableImplementation.addInstruction (1,
             new BuilderInstruction35c (
-                Opcode.INVOKE_STATIC,
-                1,
-                0,
-                0, 0, 0, 0,
-                new ImmutableMethodReference (
+                Opcode.INVOKE_STATIC, // Opcode opcode
+                1, // int registerCount
+                0, // int registerC
+                0, 0, 0, 0, // int registerD, int registerE, int registerF, int registerG,
+                new ImmutableMethodReference ( // Reference reference
                     "Ljava/lang/System;",
                     "loadLibrary",
                     args,
@@ -104,14 +118,6 @@ public class Patcher {
                 )
             )
         );
-
-//        mutableImplementation.addInstruction (1,
-//            new BuilderInstruction21c (
-//                Opcode.CONST_STRING,
-//                0,
-//                new ImmutableStringReference("Lolololo :O")
-//            )
-//        );
 
         return mutableImplementation;
     }
@@ -130,7 +136,7 @@ public class Patcher {
      */
     private static DexFile patchDex (DexBackedDexFile input, String classToPatch, String methodToPatch) {
 
-        DexRewriter rewriter = new DexRewriter(new RewriterModule() {
+        DexRewriter rewriter = new DexRewriter (new RewriterModule() {
             @Override
             public Rewriter<MethodImplementation> getMethodImplementationRewriter (Rewriters rewriters) {
                 return (MethodImplementation impl) -> {
