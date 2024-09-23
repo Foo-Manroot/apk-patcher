@@ -2,28 +2,28 @@ package ApkPatcher.instructions;
 
 import com.android.tools.smali.dexlib2.Opcode;
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
-import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction12x;
+import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction32x;
 
-public class ModInstruction12x implements Instruction12x {
+public class ModInstruction32x implements Instruction32x {
     
-    private final Instruction12x originalInstr;
+    private final Instruction32x originalInstr;
     
-    public ModInstruction12x (Instruction originalInstr) {
+    public ModInstruction32x (Instruction originalInstr) {
 
-        Instruction12x i = (Instruction12x) originalInstr;
+        Instruction32x i = (Instruction32x) originalInstr;
 
         this.originalInstr = i;
     }
 
     @Override
-    public int getRegisterA() {
+    public int getRegisterA () {
         
         return originalInstr.getRegisterA () + 1;
     }
     
     @Override
     public int getRegisterB () {
-        
+
         return originalInstr.getRegisterB () + 1;
     }
 

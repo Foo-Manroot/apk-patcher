@@ -2,15 +2,15 @@ package ApkPatcher.instructions;
 
 import com.android.tools.smali.dexlib2.Opcode;
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
-import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction12x;
+import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction22cs;
 
-public class ModInstruction12x implements Instruction12x {
+public class ModInstruction22cs implements Instruction22cs {
     
-    private final Instruction12x originalInstr;
+    private final Instruction22cs originalInstr;
     
-    public ModInstruction12x (Instruction originalInstr) {
+    public ModInstruction22cs (Instruction originalInstr) {
 
-        Instruction12x i = (Instruction12x) originalInstr;
+        Instruction22cs i = (Instruction22cs) originalInstr;
 
         this.originalInstr = i;
     }
@@ -20,7 +20,7 @@ public class ModInstruction12x implements Instruction12x {
         
         return originalInstr.getRegisterA () + 1;
     }
-    
+
     @Override
     public int getRegisterB () {
         
@@ -39,5 +39,10 @@ public class ModInstruction12x implements Instruction12x {
     @Override
     public int getCodeUnits () {
         return originalInstr.getCodeUnits ();
+    }
+
+    @Override
+    public int getFieldOffset () {
+        return originalInstr.getFieldOffset ();
     }
 }

@@ -2,15 +2,15 @@ package ApkPatcher.instructions;
 
 import com.android.tools.smali.dexlib2.Opcode;
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
-import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction12x;
+import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction22b;
 
-public class ModInstruction12x implements Instruction12x {
+public class ModInstruction22b implements Instruction22b {
     
-    private final Instruction12x originalInstr;
+    private final Instruction22b originalInstr;
     
-    public ModInstruction12x (Instruction originalInstr) {
+    public ModInstruction22b (Instruction originalInstr) {
 
-        Instruction12x i = (Instruction12x) originalInstr;
+        Instruction22b i = (Instruction22b) originalInstr;
 
         this.originalInstr = i;
     }
@@ -39,5 +39,15 @@ public class ModInstruction12x implements Instruction12x {
     @Override
     public int getCodeUnits () {
         return originalInstr.getCodeUnits ();
+    }
+
+    @Override
+    public int getNarrowLiteral () {
+        return originalInstr.getNarrowLiteral ();
+    }
+
+    @Override
+    public long getWideLiteral () {
+        return originalInstr.getWideLiteral ();
     }
 }
