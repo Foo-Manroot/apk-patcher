@@ -433,7 +433,7 @@ def get_arch_from_filename (filename):
     abi = filename.stem.split (".")[-1]
     all_arch = [ ABI_MAPPING[x] for x in ABI_MAPPING ]
 
-    logger.debug (f"Deducted ABI from file {filename}: {abi}")
+    logger.debug (f"Inferred ABI from file {filename}: {abi}")
 
     # Filenames do not have '-', but use '_'
     abi = abi.replace ("_", "-")
