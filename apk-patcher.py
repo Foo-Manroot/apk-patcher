@@ -6,7 +6,7 @@ import zipfile
 import requests
 import base64
 from sys import exit as sys_exit
-from sys import stdout
+from sys import stderr, stdout
 
 from lzma import decompress, FORMAT_XZ
 from shutil import rmtree, move, copy
@@ -126,7 +126,7 @@ def parse_args ():
     parser.add_argument (
             '-v', '--verbose',
             action = "count",
-            default = 0,
+            default = 1,
             help = "Increase the verbosity. Can be specified up to 3 times."
         )
 
@@ -138,7 +138,41 @@ def parse_args ():
             help = "The JS file to patch into the apk."
         )
 
+    parser.add_argument (
+            '-a', '--arch',
+            type = str,
+            choices = ABI_MAPPING.keys (),
+            help = "Bypass the ABI detection and force the usage of a specific architecture for the injected Frida gadget."
+        )
+
+    #####
+    # Options depending on another
+    #####
+
+    parser.add_argument (
+            '-d', '--dir-lib',
+            type = str,
+            help = ("Force the Frida gadget to be injected into a specific directory within the APK. For example: `-d 'lib/arm/' -a x86_64`.\n"
+                "Requires --arch"
+            )
+        )
+
+
     args = parser.parse_args ()
+
+    ####
+    # Verifies dependencies between flags
+    ####
+
+    # --dir-lib requires --arch
+    if args.dir_lib is not None \
+        and args.arch is None:
+
+        logger.error ("The argument `--dir-lib` requires `--arch`. See help for more info")
+        parser.print_help (stderr)
+        sys_exit (1)
+
+
     return args
 
 
@@ -456,12 +490,12 @@ def arch_to_dirname (arch):
     return None
 
 
-def add_native_lib_to_apk (apk_path, out_path, frida_script = None, gadget_config = None):
+def add_native_lib_to_apk (apk_path, out_path, frida_script = None, gadget_config = None, forced_arch = None, forced_dir = None):
     """
     Downloads the Frida gadget and adds it to the APK, generating a copy of it.
     The original APK is not modified.
     """
-    architectures = get_arch_from_filename (apk_path)
+    architectures = [ forced_arch ] if forced_arch else get_arch_from_filename (apk_path)
 
     logger.info (f"Requesting {FRIDA_ASSETS_URL}")
     r = requests.get (FRIDA_ASSETS_URL)
@@ -502,18 +536,18 @@ def add_native_lib_to_apk (apk_path, out_path, frida_script = None, gadget_confi
 
                         lib_xz = r.content
                         lib = decompress (lib_xz, format = FORMAT_XZ)
-                        dirname = arch_to_dirname (arch)
+                        dirname = forced_dir if forced_dir else ("lib/" + arch_to_dirname (arch))
 
                         if dirname is None:
                             # idk, man...
                             dirname = arch
 
-                        out_apk.writestr (f"lib/{dirname}/libgadget.so", lib)
+                        out_apk.writestr (f"{dirname}/libgadget.so", lib)
                         if gadget_config:
-                            out_apk.writestr (f"lib/{dirname}/libgadget.config.so", gadget_config)
+                            out_apk.writestr (f"{dirname}/libgadget.config.so", gadget_config)
                         if frida_script:
-                            out_apk.writestr (f"lib/{dirname}/libgadget.js.so", frida_script)
-                        logger.debug (f"Added all *.so to {out_path}!lib/{dirname}/")
+                            out_apk.writestr (f"{dirname}/libgadget.js.so", frida_script)
+                        logger.debug (f"Added all *.so to {out_path}!{dirname}/")
 
 
 def get_full_filelist (parts, use_basename = False):
@@ -734,12 +768,24 @@ if __name__ == "__main__":
 
         for path in parts ["abi"]:
             out_path = OUT_DIR / path.name
-            add_native_lib_to_apk (path, out_path, frida_script)
+            add_native_lib_to_apk (
+                    path,
+                    out_path,
+                    frida_script,
+                    forced_arch = args.arch,
+                    forced_dir = args.dir_lib
+                )
 
     else:
         # Support for single APKs (or APKs without native libs)
         tmp_mod = mod_apk_path.with_suffix (".tmp")
-        add_native_lib_to_apk (mod_apk_path, tmp_mod, frida_script)
+        add_native_lib_to_apk (
+                mod_apk_path,
+                tmp_mod,
+                frida_script,
+                forced_arch = args.arch,
+                forced_dir = args.dir_lib
+            )
         move (tmp_mod, mod_apk_path)
 
     # 5: Add extractNativeLibs=true to the AndroidManifest.xml, to
